@@ -1,0 +1,12 @@
+.input {
+  width: 100%;
+  max-width: 240px;
+  min-width: 200px;
+  padding: 6px 12px;
+  font-size: 16px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
