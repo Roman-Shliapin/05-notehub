@@ -1,4 +1,4 @@
-import { useFormik } from "formik";
+import { Formik, ErrorMessage, useFormikContext } from "formik";
 import type { NoteTag } from "../../types/NoteTag";
 import css from "./NoteForm.module.css";
 import * as Yup from "yup";
@@ -21,7 +21,15 @@ interface NoteFormProps {
   onCancel: () => void;
 }
 
-function NoteForm({ onCancel }: NoteFormProps) {
+interface FormValues {
+  title: string;
+  content: string;
+  tag: NoteTag;
+}
+
+function NoteFormInner({ onCancel }: NoteFormProps) {
+  const { values, handleChange, handleBlur, isSubmitting, isValid } =
+    useFormikContext<FormValues>();
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
@@ -36,20 +44,14 @@ function NoteForm({ onCancel }: NoteFormProps) {
     },
   });
 
-  const formik = useFormik({
-    initialValues: {
-      title: "",
-      content: "",
-      tag: "Todo" as NoteTag,
-    },
-    validationSchema,
-    onSubmit: (values) => {
-      createMutation.mutate(values);
-    },
-  });
-
   return (
-    <form className={css.form} onSubmit={formik.handleSubmit}>
+    <form
+      className={css.form}
+      onSubmit={(e) => {
+        e.preventDefault();
+        createMutation.mutate(values);
+      }}
+    >
       <div className={css.formGroup}>
         <label htmlFor="title">Title</label>
         <input
@@ -57,13 +59,11 @@ function NoteForm({ onCancel }: NoteFormProps) {
           type="text"
           name="title"
           className={css.input}
-          value={formik.values.title}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          value={values.title}
+          onChange={handleChange}
+          onBlur={handleBlur}
         />
-        <span className={css.error}>
-          {formik.touched.title && formik.errors.title}
-        </span>
+        <ErrorMessage name="title" component="span" className={css.error} />
       </div>
 
       <div className={css.formGroup}>
@@ -73,13 +73,11 @@ function NoteForm({ onCancel }: NoteFormProps) {
           name="content"
           rows={8}
           className={css.textarea}
-          value={formik.values.content}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          value={values.content}
+          onChange={handleChange}
+          onBlur={handleBlur}
         />
-        <span className={css.error}>
-          {formik.touched.content && formik.errors.content}
-        </span>
+        <ErrorMessage name="content" component="span" className={css.error} />
       </div>
 
       <div className={css.formGroup}>
@@ -88,9 +86,9 @@ function NoteForm({ onCancel }: NoteFormProps) {
           id="tag"
           name="tag"
           className={css.select}
-          value={formik.values.tag}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          value={values.tag}
+          onChange={handleChange}
+          onBlur={handleBlur}
         >
           <option value="Todo">Todo</option>
           <option value="Work">Work</option>
@@ -98,9 +96,7 @@ function NoteForm({ onCancel }: NoteFormProps) {
           <option value="Meeting">Meeting</option>
           <option value="Shopping">Shopping</option>
         </select>
-        <span className={css.error}>
-          {formik.touched.tag && formik.errors.tag}
-        </span>
+        <ErrorMessage name="tag" component="span" className={css.error} />
       </div>
 
       <div className={css.actions}>
@@ -110,12 +106,29 @@ function NoteForm({ onCancel }: NoteFormProps) {
         <button
           type="submit"
           className={css.submitButton}
-          disabled={formik.isSubmitting || !formik.isValid || createMutation.isPending}
+          disabled={isSubmitting || createMutation.isPending}
         >
           Create note
         </button>
       </div>
     </form>
+  );
+}
+
+function NoteForm({ onCancel }: NoteFormProps) {
+  return (
+    <Formik
+      initialValues={{
+        title: "",
+        content: "",
+        tag: "Todo" as NoteTag,
+      }}
+      validationSchema={validationSchema}
+      validateOnMount={true}
+      onSubmit={() => {}}
+    >
+      <NoteFormInner onCancel={onCancel} />
+    </Formik>
   );
 }
 
