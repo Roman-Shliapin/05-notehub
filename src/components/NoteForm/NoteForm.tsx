@@ -5,6 +5,7 @@ import * as Yup from "yup";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createNote } from "../../services/noteService";
 import toast from "react-hot-toast";
+import { useRef } from "react";
 
 const validationSchema = Yup.object({
   title: Yup.string()
@@ -28,29 +29,13 @@ interface FormValues {
 }
 
 function NoteFormInner({ onCancel }: NoteFormProps) {
-  const { values, handleChange, handleBlur, isSubmitting, isValid } =
+  const { handleChange, handleBlur, handleSubmit, isSubmitting, values } =
     useFormikContext<FormValues>();
-  const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: createNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      toast.success("Note created successfully");
-      onCancel();
-    },
-    onError: () => {
-      toast.error("Failed to create note");
-    },
-  });
 
   return (
     <form
       className={css.form}
-      onSubmit={(e) => {
-        e.preventDefault();
-        createMutation.mutate(values);
-      }}
+      onSubmit={handleSubmit}
     >
       <div className={css.formGroup}>
         <label htmlFor="title">Title</label>
@@ -106,7 +91,7 @@ function NoteFormInner({ onCancel }: NoteFormProps) {
         <button
           type="submit"
           className={css.submitButton}
-          disabled={isSubmitting || createMutation.isPending}
+          disabled={isSubmitting}
         >
           Create note
         </button>
@@ -116,6 +101,27 @@ function NoteFormInner({ onCancel }: NoteFormProps) {
 }
 
 function NoteForm({ onCancel }: NoteFormProps) {
+  const queryClient = useQueryClient();
+  const setSubmittingRef = useRef<((isSubmitting: boolean) => void) | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: createNote,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      toast.success("Note created successfully");
+      if (setSubmittingRef.current) {
+        setSubmittingRef.current(false);
+      }
+      onCancel();
+    },
+    onError: () => {
+      toast.error("Failed to create note");
+      if (setSubmittingRef.current) {
+        setSubmittingRef.current(false);
+      }
+    },
+  });
+
   return (
     <Formik
       initialValues={{
@@ -125,7 +131,10 @@ function NoteForm({ onCancel }: NoteFormProps) {
       }}
       validationSchema={validationSchema}
       validateOnMount={true}
-      onSubmit={() => {}}
+      onSubmit={(values, { setSubmitting }) => {
+        setSubmittingRef.current = setSubmitting;
+        createMutation.mutate(values);
+      }}
     >
       <NoteFormInner onCancel={onCancel} />
     </Formik>
